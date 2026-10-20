@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f6f8fc">
+  <title>Monitoria — painel do aluno monitor</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17253b;
+      --muted: #718096;
+      --line: #e8edf4;
+      --surface: #fff;
+      --canvas: #f6f8fc;
+      --blue: #3768e5;
+      --blue-dark: #2854c8;
+      --blue-soft: #edf3ff;
+      --yellow: #fff3c8;
+      --yellow-ink: #986b06;
+      --green: #188765;
+      --red: #c84b53;
+      --shadow: 0 16px 45px rgba(29, 48, 83, .07);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--canvas); }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .hidden { display: none !important; }
+    .auth-screen { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; background: #fff; }
+    .auth-aside { display: flex; flex-direction: column; justify-content: space-between; padding: 48px clamp(28px, 7vw, 100px); color: #fff; background: linear-gradient(145deg, #244dbb, #3976ed 62%, #6c9cff); overflow: hidden; position: relative; }
+    .auth-aside:after { content: ""; position: absolute; width: 440px; height: 440px; border: 1px solid rgba(255,255,255,.17); border-radius: 50%; right: -170px; bottom: -150px; box-shadow: 0 0 0 46px rgba(255,255,255,.04), 0 0 0 100px rgba(255,255,255,.035); }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 750; letter-spacing: -.03em; font-size: 19px; }
+    .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; color: var(--blue); background: #fff; font-weight: 900; font-size: 21px; }
+    .auth-copy { max-width: 510px; position: relative; z-index: 1; margin: 60px 0; }
+    .auth-copy .eyebrow { color: #cbdcff; text-transform: uppercase; font-weight: 750; letter-spacing: .14em; font-size: 11px; }
+    .auth-copy h1 { max-width: 470px; margin: 20px 0 16px; font-size: clamp(36px, 4vw, 56px); line-height: 1.05; letter-spacing: -.055em; }
+    .auth-copy p { max-width: 440px; color: #e2ebff; font-size: 16px; line-height: 1.7; }
+    .auth-foot { color: #d8e5ff; font-size: 12px; }
+    .auth-main { display: grid; place-items: center; padding: 32px; }
+    .auth-card { width: min(100%, 410px); }
+    .auth-card h2 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.04em; }
+    .auth-card > p { margin: 0 0 28px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+    .auth-switch { margin-top: 20px; text-align: center; color: var(--muted); font-size: 13px; }
+    .text-button { padding: 0; border: 0; background: transparent; color: var(--blue); font-weight: 700; }
+    .app-shell { min-height: 100vh; display: flex; }
+    .sidebar { width: 250px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--line); padding: 25px 16px 18px; display: flex; flex-direction: column; }
+    .sidebar .brand { padding: 0 11px 29px; color: var(--ink); }
+    .sidebar .brand-mark { color: #fff; background: var(--blue); }
+    .nav-label { padding: 13px 12px 9px; color: #a0aabd; font-size: 10px; text-transform: uppercase; font-weight: 800; letter-spacing: .12em; }
+    .nav-list { display: grid; gap: 4px; }
+    .nav-item { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; border-radius: 9px; padding: 11px 12px; background: transparent; color: #637188; text-align: left; font-weight: 600; font-size: 13px; transition: .15s; }
+    .nav-item:hover { background: #f5f7fb; color: var(--ink); }
+    .nav-item.active { color: var(--blue); background: var(--blue-soft); }
+    .nav-icon { width: 18px; text-align: center; font-size: 16px; }
+    .sidebar-spacer { flex: 1; }
+    .user-card { display: flex; align-items: center; gap: 10px; padding: 14px 8px 6px; border-top: 1px solid var(--line); }
+    .avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: var(--blue); background: var(--blue-soft); font-size: 12px; font-weight: 800; text-transform: uppercase; flex-shrink: 0; }
+    .user-meta { min-width: 0; flex: 1; }
+    .user-meta strong, .user-meta span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .user-meta strong { font-size: 12px; }
+    .user-meta span { margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .logout-button { border: 0; color: #8290a3; background: transparent; padding: 6px; font-size: 17px; }
+    .main-area { flex: 1; min-width: 0; }
+    .topbar { height: 72px; padding: 0 clamp(20px, 4vw, 52px); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: #fff; }
+    .breadcrumb { color: var(--muted); font-size: 12px; }
+    .topbar-date { color: #69768b; font-size: 12px; }
+    .content { max-width: 1280px; padding: 35px clamp(20px, 4vw, 52px) 60px; margin: 0 auto; }
+    .page-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 25px; }
+    .page-heading h1 { margin: 0 0 8px; font-size: clamp(24px, 3vw, 30px); letter-spacing: -.045em; }
+    .page-heading p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; border-radius: 8px; padding: 10px 14px; color: #fff; background: var(--blue); font-size: 12px; font-weight: 700; transition: .15s; }
+    .button:hover { background: var(--blue-dark); transform: translateY(-1px); }
+    .button.secondary { color: #44536a; border-color: var(--line); background: #fff; }
+    .button.secondary:hover { background: #f8faff; }
+    .button.danger { color: #fff; background: var(--red); }
+    .button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+    .stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 24px 0; }
+    .stat-card, .panel, .form-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 3px 12px rgba(29, 48, 83, .025); }
+    .stat-card { padding: 19px 20px; }
+    .stat-label { color: var(--muted); font-size: 12px; font-weight: 600; }
+    .stat-number { display: flex; align-items: baseline; gap: 8px; margin-top: 13px; font-size: 29px; font-weight: 780; letter-spacing: -.05em; }
+    .stat-number small { color: #9ba6b5; font-size: 11px; font-weight: 500; letter-spacing: 0; }
+    .panel { padding: 20px; }
+    .panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 17px; }
+    .panel-heading h2 { margin: 0; font-size: 15px; letter-spacing: -.02em; }
+    .panel-heading .subtle { color: var(--muted); font-size: 11px; }
+    .empty-state { padding: 36px 18px; text-align: center; color: var(--muted); }
+    .empty-icon { display: grid; place-items: center; width: 44px; height: 44px; margin: 0 auto 12px; border-radius: 13px; background: var(--blue-soft); color: var(--blue); font-size: 20px; }
+    .empty-state strong { display: block; margin-bottom: 6px; color: var(--ink); font-size: 13px; }
+    .empty-state p { max-width: 350px; margin: 0 auto 14px; font-size: 12px; line-height: 1.6; }
+    .class-list { display: grid; gap: 10px; }
+    .class-row { display: flex; align-items: center; gap: 15px; padding: 14px; border: 1px solid var(--line); border-radius: 9px; }
+    .class-row.registered { border-left: 3px solid #4e7dec; }
+    .class-row.scheduled { border-left: 3px solid #edc449; }
+    .date-box { width: 48px; height: 50px; display: grid; align-content: center; justify-items: center; border-radius: 8px; background: #f4f6fa; flex-shrink: 0; }
+    .date-box strong { font-size: 17px; line-height: 1.1; }
+    .date-box span { margin-top: 3px; color: var(--muted); font-size: 9px; text-transform: uppercase; }
+    .class-info { min-width: 0; flex: 1; }
+    .class-info strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+    .class-info span { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; }
+    .class-side { text-align: right; }
+    .class-side strong { display: block; font-size: 12px; }
+    .class-side span { display: inline-block; margin-top: 5px; padding: 4px 7px; border-radius: 99px; color: #3767d9; background: var(--blue-soft); font-size: 9px; font-weight: 700; }
+    .class-side span.scheduled-tag { color: var(--yellow-ink); background: var(--yellow); }
+    .form-card { max-width: 790px; padding: 24px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 17px; }
+    .field { display: grid; gap: 7px; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { color: #47566d; font-size: 11px; font-weight: 700; }
+    .field input, .field select, .field textarea { width: 100%; border: 1px solid #dce3ec; border-radius: 7px; outline: none; padding: 10px 11px; color: var(--ink); background: #fff; font-size: 12px; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: #83a2f4; box-shadow: 0 0 0 3px rgba(55,104,229,.1); }
+    .field textarea { min-height: 88px; resize: vertical; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 22px; }
+    .notice { margin-bottom: 18px; padding: 12px 14px; border: 1px solid #dce7ff; border-radius: 8px; color: #4e6386; background: #f5f8ff; font-size: 11px; line-height: 1.6; }
+    .notice.warning { border-color: #f1dfaa; color: #84651b; background: #fff9e8; }
+    .table-wrap { overflow-x: auto; }
+    .admin-table { width: 100%; border-collapse: collapse; }
+    .admin-table th { padding: 10px 8px; color: #8995a7; text-align: left; border-bottom: 1px solid var(--line); font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .06em; }
+    .admin-table td { padding: 12px 8px; border-bottom: 1px solid #f0f2f6; font-size: 12px; }
+    .admin-table tr:last-child td { border-bottom: 0; }
+    .table-actions { display: flex; justify-content: flex-end; gap: 6px; }
+    .icon-button { width: 29px; height: 29px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 7px; color: #69768b; background: #fff; }
+    .icon-button:hover { color: var(--blue); background: #f5f8ff; }
+    .icon-button.delete:hover { color: var(--red); background: #fff5f5; }
+    .admin-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+    .admin-section { display: grid; gap: 16px; }
+    .inline-form { display: flex; gap: 8px; margin-top: 14px; }
+    .inline-form input { min-width: 0; flex: 1; border: 1px solid #dce3ec; border-radius: 7px; padding: 9px 10px; outline: none; font-size: 11px; }
+    .inline-form input:focus { border-color: #83a2f4; }
+    .small-empty { padding: 16px 8px; color: #99a3b1; font-size: 11px; text-align: center; }
+    .check-row { display: flex; align-items: center; gap: 12px; }
+    .check-row input { accent-color: var(--blue); width: 16px; height: 16px; }
+    .select-all { display: flex; gap: 8px; align-items: center; color: #637188; font-size: 11px; }
+    .select-all input { accent-color: var(--blue); }
+    .delete-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
+    .delete-toolbar span { color: var(--muted); font-size: 11px; }
+    .legend { display: flex; gap: 14px; margin: 0 0 14px; color: #66748a; font-size: 10px; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { width: 9px; height: 9px; border-radius: 3px; background: #4e7dec; }
+    .legend .yellow-dot { background: #edc449; }
+    .toast { position: fixed; z-index: 10; top: 18px; right: 20px; max-width: min(390px, calc(100vw - 40px)); padding: 12px 16px; border-radius: 9px; color: #fff; background: #1d304d; box-shadow: var(--shadow); font-size: 12px; animation: arrive .2s ease-out; }
+    .toast.error { background: #ae343e; }
+    @keyframes arrive { from { opacity: 0; transform: translateY(-7px); } to { opacity: 1; transform: translateY(0); } }
+    .mobile-menu { display: none; border: 0; color: var(--ink); background: transparent; font-size: 20px; }
+    @media (max-width: 920px) {
+      .sidebar { width: 218px; }
+      .admin-layout { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+      .auth-screen { grid-template-columns: 1fr; }
+      .auth-aside { min-height: 230px; padding: 25px 25px 18px; }
+      .auth-copy { margin: 38px 0 14px; }
+      .auth-copy h1 { font-size: 34px; margin: 12px 0 8px; }
+      .auth-copy p { margin: 0; font-size: 13px; }
+      .auth-foot { display: none; }
+      .auth-main { padding: 30px 24px 50px; }
+      .app-shell { display: block; }
+      .sidebar { position: fixed; z-index: 5; top: 0; bottom: 0; left: 0; width: 260px; transform: translateX(-105%); transition: transform .2s; box-shadow: var(--shadow); }
+      .sidebar.open { transform: translateX(0); }
+      .topbar { height: 60px; padding: 0 17px; gap: 12px; justify-content: flex-start; }
+      .mobile-menu { display: inline-block; }
+      .topbar-date { margin-left: auto; font-size: 10px; }
+      .content { padding: 25px 16px 40px; }
+      .page-heading { align-items: center; }
+      .page-heading p { max-width: 300px; }
+      .stats-grid { gap: 8px; }
+      .stat-card { padding: 13px 11px; }
+      .stat-label { font-size: 10px; }
+      .stat-number { font-size: 24px; }
+      .stat-number small { font-size: 9px; }
+      .panel { padding: 15px; }
+      .form-card { padding: 18px; }
+      .form-grid { grid-template-columns: 1fr; gap: 14px; }
+      .field.full { grid-column: auto; }
+    }
+    @media (max-width: 430px) {
+      .class-row { gap: 9px; padding: 10px; }
+      .date-box { width: 41px; height: 46px; }
+      .class-info strong { font-size: 11px; }
+      .class-info span { font-size: 9px; }
+      .class-side strong { font-size: 10px; }
+      .class-side span { font-size: 8px; }
+      .page-heading .button { padding: 9px; font-size: 10px; }
+      .stats-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <main id="authScreen" class="auth-screen">
+    <section class="auth-aside">
+      <div class="brand"><span class="brand-mark">M</span><span>monitoria</span></div>
+      <div class="auth-copy">
+        <span class="eyebrow">Seu espaço de organização</span>
+        <h1>Uma monitoria mais leve começa aqui.</h1>
+        <p>Organize seus horários, acompanhe suas aulas e mantenha tudo da sua monitoria em um só lugar.</p>
+      </div>
+      <div class="auth-foot">Feito para facilitar a rotina de quem ensina e aprende.</div>
+    </section>
+    <section class="auth-main">
+      <div class="auth-card">
+        <h2 id="authTitle">Boas-vindas!</h2>
+        <p id="authDescription">Entre com os dados de acesso que foram criados para você.</p>
+        <div id="configWarning" class="notice warning hidden">Configure a URL e a chave pública do Supabase neste arquivo para ativar o login e o salvamento online.</div>
+        <form id="authForm">
+          <div class="field" style="margin-bottom:15px">
+            <label for="authEmail">E-mail</label>
+            <input id="authEmail" name="email" type="email" autocomplete="email" required placeholder="voce@exemplo.com">
+          </div>
+          <div class="field">
+            <label for="authPassword">Senha</label>
+            <input id="authPassword" name="password" type="password" autocomplete="current-password" required minlength="6" placeholder="Mínimo de 6 caracteres">
+          </div>
+          <button class="button" id="authSubmit" type="submit" style="width:100%;margin-top:22px;padding:12px">Entrar</button>
+        </form>
+        <div class="auth-switch">O acesso é fornecido pelo responsável pelo sistema.</div>
+      </div>
+    </section>
+  </main>
+
+  <div id="app" class="app-shell hidden">
+    <aside id="sidebar" class="sidebar">
+      <div class="brand"><span class="brand-mark">M</span><span>monitoria</span></div>
+      <div class="nav-label">Menu principal</div>
+      <nav class="nav-list" aria-label="Menu principal">
+        <button class="nav-item active" data-page="dashboard"><span class="nav-icon">⌂</span>Visão geral</button>
+        <button class="nav-item" data-page="schedule"><span class="nav-icon">＋</span>Agendar aula</button>
+        <button class="nav-item" data-page="register"><span class="nav-icon">▣</span>Cadastrar aula</button>
+        <button class="nav-item" data-page="upcoming"><span class="nav-icon">◷</span>Aulas agendadas</button>
+        <button class="nav-item" data-page="mine"><span class="nav-icon">▤</span>Minhas aulas</button>
+        <div class="nav-label">Organização</div>
+        <button class="nav-item" data-page="delete"><span class="nav-icon">⌫</span>Excluir aulas</button>
+        <button id="adminNav" class="nav-item hidden" data-page="admin"><span class="nav-icon">⚙</span>Área administrativa</button>
+      </nav>
+      <div class="sidebar-spacer"></div>
+      <div class="user-card">
+        <div class="avatar" id="userAvatar">A</div>
+        <div class="user-meta"><strong id="userName">Aluno monitor</strong><span id="userEmail"></span></div>
+        <button class="logout-button" id="logoutButton" type="button" aria-label="Sair da conta" title="Sair">↪</button>
+      </div>
+    </aside>
+    <section class="main-area">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Abrir menu">☰</button>
+        <div class="breadcrumb">Painel <span style="color:#b6bfcc">/</span> <strong id="breadcrumbCurrent" style="color:#394961">Visão geral</strong></div>
+        <div class="topbar-date" id="todayLabel"></div>
+      </header>
+      <div id="content" class="content"></div>
+    </section>
+  </div>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+  <div id="modalRoot"></div>
+
+  <script src="./supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    (() => {
+      "use strict";
+      const supabaseConfig = window.MONITORIA_SUPABASE_CONFIG || {};
+      const SUPABASE_URL = supabaseConfig.url || "";
+      const SUPABASE_ANON_KEY = supabaseConfig.anonKey || "";
+      const PAGE_TITLES = {
+        dashboard: "Visão geral", schedule: "Agendar aula", register: "Cadastrar aula",
+        upcoming: "Aulas agendadas", mine: "Minhas aulas", delete: "Excluir aulas",
+        admin: "Área administrativa"
+      };
+      const $ = (selector, root = document) => root.querySelector(selector);
+      const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+      const emptyDatabase = () => ({ teachers: [], subjects: [], types: [], classes: [], deletionLog: [] });
+      const copyDatabase = data => JSON.parse(JSON.stringify(data));
+      const isConfigured = SUPABASE_URL.startsWith("https://") &&
+        SUPABASE_ANON_KEY.length > 20;
+      const client = isConfigured && window.supabase
+        ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        : null;
+      let currentUser = null;
+      let databaseCache = emptyDatabase();
+      let currentPage = "dashboard";
+      let toastTimer = null;
+      let selectedForDelete = new Set();
+
+      function notify(message, isError = false) {
+        const toast = $("#toast");
+        toast.textContent = message;
+        toast.classList.toggle("error", isError);
+        toast.classList.remove("hidden");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.add("hidden"), 3400);
+      }
+      function escapeHTML(value) {
+        return String(value ?? "").replace(/[&<>"']/g, char => ({
+          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        })[char]);
+      }
+      function getDatabase() { return copyDatabase(databaseCache); }
+      function getErrorMessage(error) {
+        const message = String(error?.message || "");
+        if (/invalid login credentials/i.test(message)) return "E-mail ou senha incorretos.";
+        if (/email not confirmed/i.test(message)) return "Confirme o e-mail da conta no Supabase antes de entrar.";
+        if (/failed to fetch|networkerror|load failed/i.test(message)) return "Não foi possível conectar ao Supabase. Verifique a internet e a configuração do projeto.";
+        if (/row-level security|permission denied/i.test(message)) return "Esta conta não tem permissão para fazer essa alteração.";
+        if (/relation .* does not exist|could not find the table/i.test(message)) return "As tabelas do sistema ainda não foram criadas. Execute o arquivo supabase_setup.sql no SQL Editor do Supabase.";
+        return message || "O Supabase retornou um erro inesperado.";
+      }
+      function requireSuccess(result) {
+        if (result.error) throw result.error;
+        return result.data;
+      }
+      async function loadDatabase() {
+        const [settingsResult, classesResult, deletionResult, adminResult] = await Promise.all([
+          client.from("monitoria_catalogo").select("teachers,subjects,types").eq("id", 1).maybeSingle(),
+          client.from("monitoria_aulas").select("id,type,subject,teacher,date,time,notes,status").eq("user_id", currentUser.id).order("date").order("time"),
+          client.from("monitoria_exclusoes").select("id,subject,date,reason,status,deleted_at").eq("user_id", currentUser.id).order("deleted_at", { ascending: false }).limit(8),
+          client.from("monitoria_admins").select("user_id").eq("user_id", currentUser.id).maybeSingle()
+        ]);
+        const settings = requireSuccess(settingsResult);
+        const classes = requireSuccess(classesResult);
+        const deletionLog = requireSuccess(deletionResult);
+        const adminRecord = requireSuccess(adminResult);
+        currentUser.isAdmin = Boolean(adminRecord);
+        $("#adminNav").classList.toggle("hidden", !currentUser.isAdmin);
+        databaseCache = {
+          teachers: settings?.teachers || [],
+          subjects: settings?.subjects || [],
+          types: settings?.types || [],
+          classes: (classes || []).map(item => ({ ...item, time: String(item.time).slice(0, 5) })),
+          deletionLog: (deletionLog || []).map(item => ({
+            subject: item.subject, date: item.date, reason: item.reason,
+            status: item.status, deletedAt: item.deleted_at
+          }))
+        };
+      }
+      async function saveSettings(data) {
+        const result = await client.from("monitoria_catalogo").upsert({
+          id: 1,
+          teachers: data.teachers,
+          subjects: data.subjects,
+          types: data.types
+        }, { onConflict: "id" });
+        requireSuccess(result);
+        databaseCache.teachers = data.teachers;
+        databaseCache.subjects = data.subjects;
+        databaseCache.types = data.types;
+      }
+      async function onAuthSubmit(event) {
+        event.preventDefault();
+        const form = new FormData(event.currentTarget);
+        const email = String(form.get("email") || "").trim().toLowerCase();
+        const password = String(form.get("password") || "");
+        try {
+          if (!client) return notify("O Supabase ainda não foi configurado neste arquivo.", true);
+          $("#authSubmit").disabled = true;
+          const { data, error } = await client.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          await openSession(data.user);
+        } catch (error) {
+          console.error("Falha ao autenticar.", error);
+          notify(getErrorMessage(error), true);
+        } finally {
+          $("#authSubmit").disabled = false;
+        }
+      }
+      async function openSession(user) {
+        currentUser = {
+          id: user.id,
+          email: user.email,
+          name: user.user_metadata?.full_name || user.user_metadata?.name || user.email
+        };
+        $("#authScreen").classList.add("hidden");
+        $("#app").classList.remove("hidden");
+        $("#userName").textContent = currentUser.name;
+        $("#userEmail").textContent = currentUser.email;
+        $("#userAvatar").textContent = currentUser.name.trim().slice(0, 1) || "A";
+        $("#todayLabel").textContent = new Intl.DateTimeFormat("pt-BR", {
+          weekday: "short", day: "numeric", month: "long"
+        }).format(new Date());
+        $("#content").innerHTML = `<div class="panel"><div class="empty-state"><div class="empty-icon">◌</div><strong>Carregando seus dados</strong><p>Conectando ao banco de dados...</p></div></div>`;
+        try {
+          await loadDatabase();
+          renderPage(currentPage);
+        } catch (error) {
+          console.error("Falha ao carregar os dados do Supabase.", error);
+          $("#content").innerHTML = `<div class="notice warning">${escapeHTML(getErrorMessage(error))}</div>`;
+          notify(getErrorMessage(error), true);
+        }
+      }
+      async function logout() {
+        const { error } = await client.auth.signOut();
+        if (error) {
+          console.error("Falha ao sair da conta.", error);
+          return notify(getErrorMessage(error), true);
+        }
+        currentUser = null;
+        databaseCache = emptyDatabase();
+        $("#app").classList.add("hidden");
+        $("#authScreen").classList.remove("hidden");
+        $("#authForm").reset();
+      }
+      function dateLabel(dateValue, compact = false) {
+        if (!dateValue) return "";
+        const date = new Date(`${dateValue}T12:00:00`);
+        if (Number.isNaN(date.getTime())) return "";
+        return new Intl.DateTimeFormat("pt-BR", compact
+          ? { day: "2-digit", month: "short" }
+          : { day: "2-digit", month: "long", year: "numeric" }).format(date);
+      }
+      function classCard(item) {
+        const date = new Date(`${item.date}T12:00:00`);
+        const day = Number.isNaN(date.getTime()) ? "--" : new Intl.DateTimeFormat("pt-BR", { day: "2-digit" }).format(date);
+        const month = Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(date).replace(".", "");
+        const scheduled = item.status === "scheduled";
+        return `<article class="class-row ${scheduled ? "scheduled" : "registered"}">
+          <div class="date-box"><strong>${day}</strong><span>${escapeHTML(month)}</span></div>
+          <div class="class-info"><strong>${escapeHTML(item.subject)}</strong><span>${escapeHTML(item.teacher)} · ${escapeHTML(item.type)}${item.notes ? ` · ${escapeHTML(item.notes)}` : ""}</span></div>
+          <div class="class-side"><strong>${escapeHTML(item.time)}</strong><span class="${scheduled ? "scheduled-tag" : ""}">${scheduled ? "Agendada" : "Cadastrada"}</span></div>
+        </article>`;
+      }
+      function emptyState(title, text, action = "") {
+        return `<div class="empty-state"><div class="empty-icon">＋</div><strong>${escapeHTML(title)}</strong><p>${escapeHTML(text)}</p>${action}</div>`;
+      }
+      function pageHeading(title, description, action = "") {
+        return `<div class="page-heading"><div><h1>${escapeHTML(title)}</h1><p>${escapeHTML(description)}</p></div>${action}</div>`;
+      }
+      function renderDashboard() {
+        const data = getDatabase();
+        const upcoming = data.classes.filter(item => item.status === "scheduled").sort(sortClasses).slice(0, 4);
+        return `${pageHeading(`Olá, ${currentUser.name.split(" ")[0]}!`, "Aqui está um resumo da sua rotina de monitoria.", `<button class="button" data-go="schedule">＋ Agendar aula</button>`)}
+          <div class="stats-grid">
+            <article class="stat-card"><div class="stat-label">Aulas agendadas</div><div class="stat-number">${data.classes.filter(item => item.status === "scheduled").length}<small>na agenda</small></div></article>
+            <article class="stat-card"><div class="stat-label">Minhas aulas</div><div class="stat-number">${data.classes.filter(item => item.status === "registered").length}<small>cadastradas</small></div></article>
+            <article class="stat-card"><div class="stat-label">Disciplinas</div><div class="stat-number">${data.subjects.length}<small>disponíveis</small></div></article>
+          </div>
+          <section class="panel"><div class="panel-heading"><h2>Próximas aulas agendadas</h2><button class="text-button" data-go="upcoming">Ver todas</button></div>
+          ${upcoming.length ? `<div class="class-list">${upcoming.map(classCard).join("")}</div>` : emptyState("Sua agenda está livre", "Quando você agendar uma aula, ela aparecerá aqui.", `<button class="button" data-go="schedule">Agendar primeira aula</button>`)}</section>`;
+      }
+      function sortClasses(a, b) {
+        return `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`);
+      }
+      function renderClassForm(status) {
+        const data = getDatabase();
+        const isScheduled = status === "scheduled";
+        const title = isScheduled ? "Agendar uma aula" : "Cadastrar uma aula";
+        const desc = isScheduled ? "Escolha os detalhes da aula para adicioná-la à sua agenda." : "Registre uma aula realizada ou que deseja manter em Minhas aulas.";
+        const action = isScheduled ? "Salvar aula agendada" : "Cadastrar aula";
+        const missing = [];
+        if (!data.types.length) missing.push("tipos de aula");
+        if (!data.subjects.length) missing.push("disciplinas");
+        if (!data.teachers.length) missing.push("professores");
+        return `${pageHeading(title, desc)}
+          ${missing.length ? `<div class="notice">Antes de cadastrar, adicione ${escapeHTML(missing.join(", "))} na <button class="text-button" data-go="admin">Área administrativa</button>. Esses dados alimentam as opções do formulário.</div>` : ""}
+          <form class="form-card" id="classForm" data-status="${status}">
+            <div class="form-grid">
+              <div class="field"><label for="classType">Tipo de aula *</label><select id="classType" name="type" required><option value="">Selecione o tipo</option>${data.types.map(value => `<option>${escapeHTML(value)}</option>`).join("")}</select></div>
+              <div class="field"><label for="classSubject">Disciplina *</label><select id="classSubject" name="subject" required><option value="">Selecione a disciplina</option>${data.subjects.map(value => `<option>${escapeHTML(value)}</option>`).join("")}</select></div>
+              <div class="field"><label for="classTeacher">Professora / professor *</label><select id="classTeacher" name="teacher" required><option value="">Selecione a pessoa</option>${data.teachers.map(value => `<option>${escapeHTML(value)}</option>`).join("")}</select></div>
+              <div class="field"><label for="classDate">Data da aula *</label><input id="classDate" name="date" type="date" required></div>
+              <div class="field"><label for="classTime">Horário *</label><input id="classTime" name="time" type="time" required></div>
+              <div class="field full"><label for="classNotes">Observações</label><textarea id="classNotes" name="notes" maxlength="500" placeholder="Local, conteúdo ou outras informações (opcional)"></textarea></div>
+            </div>
+            <div class="form-actions"><button class="button secondary" type="button" data-go="dashboard">Cancelar</button><button class="button" type="submit">${action}</button></div>
+          </form>`;
+      }
+      function renderClassList(status) {
+        const data = getDatabase();
+        const scheduled = status === "scheduled";
+        const items = data.classes.filter(item => item.status === status).sort(sortClasses);
+        const title = scheduled ? "Aulas agendadas" : "Minhas aulas";
+        const description = scheduled ? "Aulas planejadas para os próximos dias." : "Aulas que você cadastrou na sua monitoria.";
+        const action = scheduled ? `<button class="button" data-go="schedule">＋ Agendar aula</button>` : `<button class="button" data-go="register">＋ Cadastrar aula</button>`;
+        return `${pageHeading(title, description, action)}
+          <section class="panel"><div class="panel-heading"><h2>${items.length} ${items.length === 1 ? "aula" : "aulas"}</h2><span class="subtle">${scheduled ? "Amarelo" : "Azul"} · ${scheduled ? "agendadas" : "cadastradas"}</span></div>
+          ${items.length ? `<div class="class-list">${items.map(classCard).join("")}</div>` : emptyState(scheduled ? "Nenhuma aula agendada" : "Nenhuma aula cadastrada", scheduled ? "Agende sua próxima monitoria para encontrá-la aqui." : "Cadastre uma aula para começar seu histórico.", action)}</section>`;
+      }
+      function renderDelete() {
+        const classes = getDatabase().classes.slice().sort(sortClasses);
+        selectedForDelete = new Set([...selectedForDelete].filter(id => classes.some(item => item.id === id)));
+        return `${pageHeading("Excluir aulas", "Selecione as aulas que deseja remover. Será necessário informar o motivo da exclusão.")}
+          <div class="notice warning">A exclusão é permanente para esta conta. A justificativa ficará registrada no banco de dados.</div>
+          <div class="legend"><span><i></i> Cadastrada</span><span><i class="yellow-dot"></i> Agendada</span></div>
+          <section class="panel"><div class="panel-heading"><h2>Todas as aulas (${classes.length})</h2>${classes.length ? `<label class="select-all"><input type="checkbox" id="selectAll" ${classes.length && classes.every(item => selectedForDelete.has(item.id)) ? "checked" : ""}>Selecionar todas</label>` : ""}</div>
+          ${classes.length ? `<div class="class-list">${classes.map(item => `<label class="class-row check-row ${item.status === "scheduled" ? "scheduled" : "registered"}">
+            <input class="class-check" type="checkbox" value="${escapeHTML(item.id)}" ${selectedForDelete.has(item.id) ? "checked" : ""} aria-label="Selecionar aula de ${escapeHTML(item.subject)}">
+            <div class="date-box"><strong>${escapeHTML(item.date.slice(8, 10))}</strong><span>${escapeHTML(dateLabel(item.date, true).split(" ")[1] || "")}</span></div>
+            <div class="class-info"><strong>${escapeHTML(item.subject)}</strong><span>${escapeHTML(item.teacher)} · ${escapeHTML(item.type)} · ${escapeHTML(dateLabel(item.date))}</span></div>
+            <div class="class-side"><strong>${escapeHTML(item.time)}</strong><span class="${item.status === "scheduled" ? "scheduled-tag" : ""}">${item.status === "scheduled" ? "Agendada" : "Cadastrada"}</span></div>
+          </label>`).join("")}</div>` : emptyState("Nenhuma aula para excluir", "Suas aulas agendadas e cadastradas aparecerão nesta lista.")}</section>
+          ${classes.length ? `<div class="delete-toolbar" style="margin-top:14px"><span id="selectedCount">${selectedForDelete.size} selecionada(s)</span><button id="deleteSelected" class="button danger" type="button" ${selectedForDelete.size ? "" : "disabled"}>Excluir selecionadas</button></div>` : ""}`;
+      }
+      function renderAdminCategory(title, key, placeholder) {
+        const data = getDatabase();
+        const rows = data[key];
+        return `<section class="panel"><div class="panel-heading"><h2>${title}</h2><span class="subtle">${rows.length} ${rows.length === 1 ? "item" : "itens"}</span></div>
+          ${rows.length ? `<div class="table-wrap"><table class="admin-table"><thead><tr><th>Nome</th><th></th></tr></thead><tbody>${rows.map((name, index) => `<tr><td>${escapeHTML(name)}</td><td><div class="table-actions"><button class="icon-button edit-item" type="button" data-key="${key}" data-index="${index}" aria-label="Editar ${escapeHTML(name)}" title="Editar">✎</button><button class="icon-button delete delete-item" type="button" data-key="${key}" data-index="${index}" aria-label="Excluir ${escapeHTML(name)}" title="Excluir">×</button></div></td></tr>`).join("")}</tbody></table></div>` : `<div class="small-empty">Nenhum item cadastrado.</div>`}
+          <form class="inline-form category-form" data-key="${key}"><input name="name" required maxlength="100" placeholder="${escapeHTML(placeholder)}" aria-label="${escapeHTML(placeholder)}"><button class="button" type="submit">Adicionar</button></form></section>`;
+      }
+      function renderAdmin() {
+        return `${pageHeading("Área administrativa", "Gerencie as opções que aparecem nos formulários de aula.")}
+          <div class="notice">Estas listas ficam compartilhadas no Supabase. Outros usuários verão as alterações ao atualizar a página ou entrar novamente. A edição de uma opção não altera aulas já cadastradas.</div>
+          <div class="admin-layout">
+            <div class="admin-section">${renderAdminCategory("Professores", "teachers", "Nome da professora ou professor")}${renderAdminCategory("Disciplinas", "subjects", "Nome da disciplina")}</div>
+            <div class="admin-section">${renderAdminCategory("Tipos de aula", "types", "Ex.: Presencial, reforço...")}
+              <section class="panel"><div class="panel-heading"><h2>Histórico de exclusões</h2><span class="subtle">Registro local</span></div>${renderDeletionLog()}</section>
+            </div>
+          </div>`;
+      }
+      function renderDeletionLog() {
+        const log = getDatabase().deletionLog.slice().reverse().slice(0, 8);
+        if (!log.length) return `<div class="small-empty">Nenhuma aula excluída até agora.</div>`;
+        return `<div class="class-list">${log.map(item => `<div class="class-row"><div class="class-info"><strong>${escapeHTML(item.subject)} · ${escapeHTML(dateLabel(item.date))}</strong><span>Motivo: ${escapeHTML(item.reason)}</span></div></div>`).join("")}</div>`;
+      }
+      function renderPage(page) {
+        if (page === "admin" && !currentUser?.isAdmin) {
+          notify("A Área administrativa é restrita a administradores.", true);
+          page = "dashboard";
+        }
+        currentPage = PAGE_TITLES[page] ? page : "dashboard";
+        $("#breadcrumbCurrent").textContent = PAGE_TITLES[currentPage];
+        $$(".nav-item").forEach(item => item.classList.toggle("active", item.dataset.page === currentPage));
+        $("#content").innerHTML = ({
+          dashboard: renderDashboard,
+          schedule: () => renderClassForm("scheduled"),
+          register: () => renderClassForm("registered"),
+          upcoming: () => renderClassList("scheduled"),
+          mine: () => renderClassList("registered"),
+          delete: renderDelete,
+          admin: renderAdmin
+        })[currentPage]();
+        $("#sidebar").classList.remove("open");
+      }
+      async function onClassSubmit(event) {
+        if (event.target.id !== "classForm") return;
+        event.preventDefault();
+        const form = new FormData(event.target);
+        const data = getDatabase();
+        const item = {
+          id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          type: String(form.get("type")), subject: String(form.get("subject")),
+          teacher: String(form.get("teacher")), date: String(form.get("date")),
+          time: String(form.get("time")), notes: String(form.get("notes") || "").trim(),
+          status: event.target.dataset.status
+        };
+        if (!data.types.includes(item.type) || !data.subjects.includes(item.subject) || !data.teachers.includes(item.teacher)) {
+          return notify("Uma das opções selecionadas não está mais disponível. Atualize o formulário.", true);
+        }
+        const submitButton = event.target.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        try {
+          const saved = requireSuccess(await client.from("monitoria_aulas").insert({
+            user_id: currentUser.id, type: item.type, subject: item.subject,
+            teacher: item.teacher, date: item.date, time: item.time,
+            notes: item.notes, status: item.status
+          }).select("id,type,subject,teacher,date,time,notes,status").single());
+          databaseCache.classes.push({ ...saved, time: String(saved.time).slice(0, 5) });
+          renderPage(item.status === "scheduled" ? "upcoming" : "mine");
+          notify(item.status === "scheduled" ? "Aula adicionada às agendadas." : "Aula cadastrada em Minhas aulas.");
+        } catch (error) {
+          console.error("Falha ao salvar a aula.", error);
+          notify(getErrorMessage(error), true);
+          submitButton.disabled = false;
+        }
+      }
+      async function onCategorySubmit(event) {
+        const formElement = event.target.closest(".category-form");
+        if (!formElement) return;
+        event.preventDefault();
+        const key = formElement.dataset.key;
+        const name = String(new FormData(formElement).get("name") || "").trim();
+        const data = getDatabase();
+        if (!name) return;
+        if (data[key].some(value => value.toLocaleLowerCase("pt-BR") === name.toLocaleLowerCase("pt-BR"))) {
+          return notify("Esse item já está cadastrado.", true);
+        }
+        data[key].push(name);
+        const submitButton = formElement.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        try {
+          await saveSettings(data);
+          renderPage("admin");
+          notify("Item adicionado.");
+        } catch (error) {
+          console.error("Falha ao salvar uma opção administrativa.", error);
+          notify(getErrorMessage(error), true);
+          submitButton.disabled = false;
+        }
+      }
+      async function onAdminAction(event) {
+        const edit = event.target.closest(".edit-item");
+        const remove = event.target.closest(".delete-item");
+        if (!edit && !remove) return;
+        const button = edit || remove;
+        const key = button.dataset.key;
+        const index = Number(button.dataset.index);
+        const data = getDatabase();
+        const oldName = data[key][index];
+        if (edit) {
+          const newName = prompt("Editar nome:", oldName);
+          if (newName === null) return;
+          const normalized = newName.trim();
+          if (!normalized) return notify("O nome não pode ficar vazio.", true);
+          if (data[key].some((value, i) => i !== index && value.toLocaleLowerCase("pt-BR") === normalized.toLocaleLowerCase("pt-BR"))) {
+            return notify("Já existe outro item com esse nome.", true);
+          }
+          try {
+            data[key][index] = normalized;
+            await saveSettings(data);
+            renderPage("admin");
+            notify("Item atualizado.");
+          } catch (error) {
+            console.error("Falha ao atualizar a opção administrativa.", error);
+            notify(getErrorMessage(error), true);
+          }
+          return;
+        }
+        const property = key === "teachers" ? "teacher" : key === "subjects" ? "subject" : "type";
+        if (data.classes.some(item => item[property] === oldName)) {
+          return notify("Este item está associado a uma aula. Edite-o ou remova as aulas primeiro.", true);
+        }
+        if (!confirm(`Excluir "${oldName}"?`)) return;
+        data[key].splice(index, 1);
+        try {
+          await saveSettings(data);
+          renderPage("admin");
+          notify("Item removido.");
+        } catch (error) {
+          console.error("Falha ao excluir uma opção administrativa.", error);
+          notify(getErrorMessage(error), true);
+        }
+      }
+      function onDeleteSelection(event) {
+        if (event.target.id === "selectAll") {
+          const data = getDatabase();
+          selectedForDelete = event.target.checked ? new Set(data.classes.map(item => item.id)) : new Set();
+          renderPage("delete");
+          return;
+        }
+        if (event.target.matches(".class-check")) {
+          if (event.target.checked) selectedForDelete.add(event.target.value);
+          else selectedForDelete.delete(event.target.value);
+          const count = $("#selectedCount");
+          if (count) count.textContent = `${selectedForDelete.size} selecionada(s)`;
+          const action = $("#deleteSelected");
+          if (action) action.disabled = selectedForDelete.size === 0;
+          const all = $("#selectAll");
+          if (all) all.checked = getDatabase().classes.length > 0 && selectedForDelete.size === getDatabase().classes.length;
+        }
+      }
+      function openDeleteDialog() {
+        const data = getDatabase();
+        const chosen = data.classes.filter(item => selectedForDelete.has(item.id));
+        if (!chosen.length) return;
+        $("#modalRoot").innerHTML = `<div id="deleteModal" style="position:fixed;inset:0;z-index:8;display:grid;place-items:center;padding:20px;background:rgba(16,29,49,.45)">
+          <form id="deleteForm" class="form-card" style="width:min(100%,480px);box-shadow:0 20px 70px rgba(0,0,0,.18)">
+            <h2 style="margin:0 0 8px;font-size:20px">Confirmar exclusão</h2><p style="margin:0 0 18px;color:var(--muted);font-size:12px;line-height:1.6">Você selecionou ${chosen.length} ${chosen.length === 1 ? "aula" : "aulas"}. Para continuar, informe a justificativa.</p>
+            <div class="field"><label for="deleteReason">Justificativa *</label><textarea id="deleteReason" name="reason" required maxlength="300" placeholder="Descreva o motivo da exclusão"></textarea></div>
+            <div class="form-actions"><button class="button secondary" type="button" id="cancelDelete">Cancelar</button><button class="button danger" type="submit">Confirmar exclusão</button></div>
+          </form></div>`;
+        $("#deleteReason").focus();
+      }
+      async function onDeleteSubmit(event) {
+        if (event.target.id !== "deleteForm") return;
+        event.preventDefault();
+        const reason = String(new FormData(event.target).get("reason") || "").trim();
+        if (!reason) return notify("Informe a justificativa para continuar.", true);
+        const data = getDatabase();
+        const removed = data.classes.filter(item => selectedForDelete.has(item.id));
+        if (!removed.length) {
+          $("#modalRoot").innerHTML = "";
+          return notify("As aulas selecionadas não foram encontradas.", true);
+        }
+        const submitButton = event.target.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        try {
+          const removedCount = requireSuccess(await client.rpc("excluir_monitoria_aulas", {
+            p_aula_ids: removed.map(item => item.id),
+            p_justificativa: reason
+          }));
+          if (!removedCount) throw new Error("Nenhuma aula selecionada foi encontrada para excluir.");
+          selectedForDelete.clear();
+          $("#modalRoot").innerHTML = "";
+          await loadDatabase();
+          renderPage("delete");
+          notify(`${removedCount} ${removedCount === 1 ? "aula excluída" : "aulas excluídas"} com justificativa.`);
+        } catch (error) {
+          console.error("Falha ao excluir aulas.", error);
+          notify(getErrorMessage(error), true);
+          submitButton.disabled = false;
+        }
+      }
+      document.addEventListener("submit", event => {
+        if (event.target.id === "authForm") onAuthSubmit(event);
+        else if (event.target.id === "classForm") onClassSubmit(event);
+        else if (event.target.matches(".category-form")) onCategorySubmit(event);
+        else if (event.target.id === "deleteForm") onDeleteSubmit(event);
+      });
+      document.addEventListener("click", event => {
+        const nav = event.target.closest("[data-page]");
+        const go = event.target.closest("[data-go]");
+        const editOrDelete = event.target.closest(".edit-item, .delete-item");
+        if (nav) renderPage(nav.dataset.page);
+        else if (go) renderPage(go.dataset.go);
+        else if (editOrDelete) onAdminAction({ target: editOrDelete });
+        else if (event.target.id === "deleteSelected") openDeleteDialog();
+        else if (event.target.id === "cancelDelete" || event.target.id === "deleteModal") $("#modalRoot").innerHTML = "";
+      });
+      document.addEventListener("change", onDeleteSelection);
+      $("#logoutButton").addEventListener("click", logout);
+      $("#mobileMenu").addEventListener("click", () => $("#sidebar").classList.toggle("open"));
+      if (!client) {
+        $("#configWarning").classList.remove("hidden");
+        $("#authSubmit").disabled = true;
+      } else {
+        client.auth.getSession().then(({ data, error }) => {
+          if (error) throw error;
+          if (data.session?.user) openSession(data.session.user);
+        }).catch(error => {
+          console.error("Falha ao restaurar a sessão.", error);
+          notify(getErrorMessage(error), true);
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
