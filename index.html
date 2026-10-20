@@ -202,7 +202,7 @@
       <div class="auth-card">
         <h2 id="authTitle">Boas-vindas!</h2>
         <p id="authDescription">Entre com os dados de acesso que foram criados para você.</p>
-        <div id="configWarning" class="notice warning hidden">Configure a URL e a chave pública do Supabase neste arquivo para ativar o login e o salvamento online.</div>
+        <div id="configWarning" class="notice warning hidden" role="status"></div>
         <form id="authForm">
           <div class="field" style="margin-bottom:15px">
             <label for="authEmail">E-mail</label>
@@ -707,6 +707,14 @@
       $("#logoutButton").addEventListener("click", logout);
       $("#mobileMenu").addEventListener("click", () => $("#sidebar").classList.toggle("open"));
       if (!client) {
+        const configWarning = $("#configWarning");
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+          configWarning.textContent = "Não encontrei a configuração do Supabase. No GitHub, publique o arquivo supabase-config.js na mesma pasta do index.html e aguarde o Pages atualizar.";
+        } else if (!window.supabase) {
+          configWarning.textContent = "A biblioteca de login do Supabase não carregou. Verifique a conexão com a internet ou tente abrir o site novamente.";
+        } else {
+          configWarning.textContent = "A configuração do Supabase está incompleta. Confira a URL do projeto e a chave anon/publicável no arquivo supabase-config.js.";
+        }
         $("#configWarning").classList.remove("hidden");
         $("#authSubmit").disabled = true;
       } else {
