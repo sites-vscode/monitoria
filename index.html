@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-     <link rel="icon" type="image/png" href="Captura de tela 2026-10-21 174546.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f8fc">
+  <link rel="icon" type="image/png" href="Captura de tela 2026-10-21 174546.png">
   <title>Monitoria — painel do aluno monitor</title>
   <style>
     :root {
@@ -108,6 +108,8 @@
     .button.danger { color: #fff; background: var(--red); }
     .button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
     .stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 24px 0; }
+    .dashboard-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+    .dashboard-columns .panel { min-width: 0; height: 100%; }
     .stat-card, .panel, .form-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 3px 12px rgba(29, 48, 83, .025); }
     .stat-card { padding: 19px 20px; }
     .stat-label { color: var(--muted); font-size: 12px; font-weight: 600; }
@@ -200,6 +202,7 @@
       .page-heading { align-items: center; }
       .page-heading p { max-width: 300px; }
       .stats-grid { gap: 8px; }
+      .dashboard-columns { grid-template-columns: 1fr; }
       .stat-card { padding: 13px 11px; }
       .stat-label { font-size: 10px; }
       .stat-number { font-size: 24px; }
@@ -377,7 +380,7 @@
       async function loadDatabase() {
         const [settingsResult, classesResult, deletionResult, adminResult] = await Promise.all([
           client.from("monitoria_catalogo").select("teachers,subjects,types,turmas").eq("id", 1).maybeSingle(),
-          client.from("monitoria_aulas").select("id,type,subject,teacher,turma,date,time,notes,status").eq("user_id", currentUser.id).order("date").order("time"),
+          client.from("monitoria_aulas").select("id,type,subject,teacher,turma,date,time,notes,status,created_at").eq("user_id", currentUser.id).order("created_at", { ascending: false }),
           client.from("monitoria_exclusoes").select("id,subject,turma,date,reason,status,deleted_at").eq("user_id", currentUser.id).order("deleted_at", { ascending: false }).limit(8),
           client.from("monitoria_admins").select("user_id").eq("user_id", currentUser.id).maybeSingle()
         ]);
@@ -501,7 +504,7 @@
         const scheduled = item.status === "scheduled";
         return `<article class="class-row ${scheduled ? "scheduled" : "registered"}">
           <div class="date-box"><strong>${day}</strong><span>${escapeHTML(month)}</span></div>
-          <div class="class-info"><strong>${escapeHTML(item.subject)}${item.turma ? ` · ${escapeHTML(item.turma)}` : ""}</strong><span>${escapeHTML(item.teacher)} · ${escapeHTML(item.type)}${item.notes ? ` · ${escapeHTML(item.notes)}` : ""}</span></div>
+          <div class="class-info"><strong>${escapeHTML(item.subject)}${item.turma ? ` · ${escapeHTML(item.turma)}` : ""}</strong><span>${escapeHTML(item.teacher)} · ${escapeHTML(item.type)}${item.notes ? ` · ${escapeHTML(item.notes)}` : ""}${item.status === "registered" && item.created_at ? `<br>Cadastrada em ${escapeHTML(createdAtLabel(item.created_at))}` : ""}</span></div>
           <div class="class-side"><strong>${escapeHTML(item.time)}</strong><span class="${scheduled ? "scheduled-tag" : ""}">${scheduled ? "Agendada" : "Cadastrada"}</span></div>
         </article>`;
       }
@@ -514,17 +517,32 @@
       function renderDashboard() {
         const data = getDatabase();
         const upcoming = data.classes.filter(item => item.status === "scheduled").sort(sortClasses).slice(0, 4);
+        const recentRegistered = data.classes
+          .filter(item => item.status === "registered")
+          .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+          .slice(0, 4);
         return `${pageHeading(`Olá, ${currentUser.name.split(" ")[0]}!`, "Aqui está um resumo da sua rotina de monitoria.", `<button class="button" data-go="schedule">＋ Agendar aula</button>`)}
           <div class="stats-grid">
             <article class="stat-card"><div class="stat-label">Aulas agendadas</div><div class="stat-number">${data.classes.filter(item => item.status === "scheduled").length}<small>na agenda</small></div></article>
             <article class="stat-card"><div class="stat-label">Minhas aulas</div><div class="stat-number">${data.classes.filter(item => item.status === "registered").length}<small>cadastradas</small></div></article>
             <article class="stat-card"><div class="stat-label">Disciplinas</div><div class="stat-number">${data.subjects.length}<small>disponíveis</small></div></article>
           </div>
-          <section class="panel"><div class="panel-heading"><h2>Próximas aulas agendadas</h2><button class="text-button" data-go="upcoming">Ver todas</button></div>
-          ${upcoming.length ? `<div class="class-list">${upcoming.map(classCard).join("")}</div>` : emptyState("Sua agenda está livre", "Quando você agendar uma aula, ela aparecerá aqui.", `<button class="button" data-go="schedule">Agendar primeira aula</button>`)}</section>`;
+          <div class="dashboard-columns">
+            <section class="panel"><div class="panel-heading"><h2>Próximas aulas agendadas</h2><button class="text-button" data-go="upcoming">Ver todas</button></div>
+            ${upcoming.length ? `<div class="class-list">${upcoming.map(classCard).join("")}</div>` : emptyState("Sua agenda está livre", "Quando você agendar uma aula, ela aparecerá aqui.", `<button class="button" data-go="schedule">Agendar primeira aula</button>`)}</section>
+            <section class="panel"><div class="panel-heading"><h2>Últimas aulas cadastradas</h2><button class="text-button" data-go="mine">Ver todas</button></div>
+            ${recentRegistered.length ? `<div class="class-list">${recentRegistered.map(classCard).join("")}</div>` : emptyState("Nenhuma aula cadastrada", "As aulas que você cadastrar aparecerão aqui.")}</section>
+          </div>`;
       }
       function sortClasses(a, b) {
         return `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`);
+      }
+      function createdAtLabel(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "";
+        return new Intl.DateTimeFormat("pt-BR", {
+          day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
+        }).format(date);
       }
       function renderClassForm(status) {
         const data = getDatabase();
@@ -653,7 +671,7 @@
             user_id: currentUser.id, type: item.type, subject: item.subject,
             teacher: item.teacher, turma: item.turma, date: item.date, time: item.time,
             notes: item.notes, status: item.status
-          }).select("id,type,subject,teacher,date,time,notes,status").single());
+          }).select("id,type,subject,teacher,turma,date,time,notes,status,created_at").single());
           databaseCache.classes.push({ ...saved, time: String(saved.time).slice(0, 5) });
           renderPage(item.status === "scheduled" ? "upcoming" : "mine");
           notify(item.status === "scheduled" ? "Aula adicionada às agendadas." : "Aula cadastrada em Minhas aulas.");
