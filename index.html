@@ -63,7 +63,7 @@
     .user-meta span { margin-top: 3px; color: var(--muted); font-size: 10px; }
     .logout-button { border: 0; color: #8290a3; background: transparent; padding: 6px; font-size: 17px; }
     .main-area { flex: 1; min-width: 0; }
-    .topbar { height: 72px; padding: 0 clamp(20px, 4vw, 52px); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: #fff; }
+    .topbar { position: sticky; top: 0; z-index: 6; height: 72px; padding: 0 clamp(20px, 4vw, 52px); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: #fff; }
     .breadcrumb { color: var(--muted); font-size: 12px; }
     .topbar-date { color: #69768b; font-size: 12px; }
     .topbar-actions { display: flex; align-items: center; gap: 17px; }
@@ -310,7 +310,7 @@
       };
       const $ = (selector, root = document) => root.querySelector(selector);
       const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-      const emptyDatabase = () => ({ teachers: [], subjects: [], types: [], classes: [], deletionLog: [] });
+      const emptyDatabase = () => ({ teachers: [], subjects: [], types: [], turmas: [], classes: [], deletionLog: [] });
       const copyDatabase = data => JSON.parse(JSON.stringify(data));
       const isConfigured = SUPABASE_URL.startsWith("https://") &&
         SUPABASE_ANON_KEY.length > 20;
@@ -375,9 +375,9 @@
       }
       async function loadDatabase() {
         const [settingsResult, classesResult, deletionResult, adminResult] = await Promise.all([
-          client.from("monitoria_catalogo").select("teachers,subjects,types").eq("id", 1).maybeSingle(),
-          client.from("monitoria_aulas").select("id,type,subject,teacher,date,time,notes,status").eq("user_id", currentUser.id).order("date").order("time"),
-          client.from("monitoria_exclusoes").select("id,subject,date,reason,status,deleted_at").eq("user_id", currentUser.id).order("deleted_at", { ascending: false }).limit(8),
+          client.from("monitoria_catalogo").select("teachers,subjects,types,turmas").eq("id", 1).maybeSingle(),
+          client.from("monitoria_aulas").select("id,type,subject,teacher,turma,date,time,notes,status").eq("user_id", currentUser.id).order("date").order("time"),
+          client.from("monitoria_exclusoes").select("id,subject,turma,date,reason,status,deleted_at").eq("user_id", currentUser.id).order("deleted_at", { ascending: false }).limit(8),
           client.from("monitoria_admins").select("user_id").eq("user_id", currentUser.id).maybeSingle()
         ]);
         const settings = requireSuccess(settingsResult);
@@ -390,9 +390,10 @@
           teachers: settings?.teachers || [],
           subjects: settings?.subjects || [],
           types: settings?.types || [],
+          turmas: settings?.turmas || [],
           classes: (classes || []).map(item => ({ ...item, time: String(item.time).slice(0, 5) })),
           deletionLog: (deletionLog || []).map(item => ({
-            subject: item.subject, date: item.date, reason: item.reason,
+            subject: item.subject, turma: item.turma, date: item.date, reason: item.reason,
             status: item.status, deletedAt: item.deleted_at
           }))
         };
@@ -402,12 +403,14 @@
           id: 1,
           teachers: data.teachers,
           subjects: data.subjects,
-          types: data.types
+          types: data.types,
+          turmas: data.turmas
         }, { onConflict: "id" });
         requireSuccess(result);
         databaseCache.teachers = data.teachers;
         databaseCache.subjects = data.subjects;
         databaseCache.types = data.types;
+        databaseCache.turmas = data.turmas;
       }
       async function onAuthSubmit(event) {
         event.preventDefault();
@@ -497,7 +500,7 @@
         const scheduled = item.status === "scheduled";
         return `<article class="class-row ${scheduled ? "scheduled" : "registered"}">
           <div class="date-box"><strong>${day}</strong><span>${escapeHTML(month)}</span></div>
-          <div class="class-info"><strong>${escapeHTML(item.subject)}</strong><span>${escapeHTML(item.teacher)} · ${escapeHTML(item.type)}${item.notes ? ` · ${escapeHTML(item.notes)}` : ""}</span></div>
+          <div class="class-info"><strong>${escapeHTML(item.subject)}${item.turma ? ` · ${escapeHTML(item.turma)}` : ""}</strong><span>${escapeHTML(item.teacher)} · ${escapeHTML(item.type)}${item.notes ? ` · ${escapeHTML(item.notes)}` : ""}</span></div>
           <div class="class-side"><strong>${escapeHTML(item.time)}</strong><span class="${scheduled ? "scheduled-tag" : ""}">${scheduled ? "Agendada" : "Cadastrada"}</span></div>
         </article>`;
       }
@@ -532,6 +535,7 @@
         if (!data.types.length) missing.push("tipos de aula");
         if (!data.subjects.length) missing.push("disciplinas");
         if (!data.teachers.length) missing.push("professores");
+        if (!data.turmas.length) missing.push("turmas");
         return `${pageHeading(title, desc)}
           ${missing.length ? `<div class="notice">Antes de cadastrar, adicione ${escapeHTML(missing.join(", "))} na <button class="text-button" data-go="admin">Área administrativa</button>. Esses dados alimentam as opções do formulário.</div>` : ""}
           <form class="form-card" id="classForm" data-status="${status}">
@@ -539,6 +543,7 @@
               <div class="field"><label for="classType">Tipo de aula *</label><select id="classType" name="type" required><option value="">Selecione o tipo</option>${data.types.map(value => `<option>${escapeHTML(value)}</option>`).join("")}</select></div>
               <div class="field"><label for="classSubject">Disciplina *</label><select id="classSubject" name="subject" required><option value="">Selecione a disciplina</option>${data.subjects.map(value => `<option>${escapeHTML(value)}</option>`).join("")}</select></div>
               <div class="field"><label for="classTeacher">Professora / professor *</label><select id="classTeacher" name="teacher" required><option value="">Selecione a pessoa</option>${data.teachers.map(value => `<option>${escapeHTML(value)}</option>`).join("")}</select></div>
+              <div class="field"><label for="classTurma">Turma *</label><select id="classTurma" name="turma" required><option value="">Selecione a turma</option>${data.turmas.map(value => `<option>${escapeHTML(value)}</option>`).join("")}</select></div>
               <div class="field"><label for="classDate">Data da aula *</label><input id="classDate" name="date" type="date" required></div>
               <div class="field"><label for="classTime">Horário *</label><input id="classTime" name="time" type="time" required></div>
               <div class="field full"><label for="classNotes">Observações</label><textarea id="classNotes" name="notes" maxlength="500" placeholder="Local, conteúdo ou outras informações (opcional)"></textarea></div>
@@ -567,7 +572,7 @@
           ${classes.length ? `<div class="class-list">${classes.map(item => `<label class="class-row check-row ${item.status === "scheduled" ? "scheduled" : "registered"}">
             <input class="class-check" type="checkbox" value="${escapeHTML(item.id)}" ${selectedForDelete.has(item.id) ? "checked" : ""} aria-label="Selecionar aula de ${escapeHTML(item.subject)}">
             <div class="date-box"><strong>${escapeHTML(item.date.slice(8, 10))}</strong><span>${escapeHTML(dateLabel(item.date, true).split(" ")[1] || "")}</span></div>
-            <div class="class-info"><strong>${escapeHTML(item.subject)}</strong><span>${escapeHTML(item.teacher)} · ${escapeHTML(item.type)} · ${escapeHTML(dateLabel(item.date))}</span></div>
+            <div class="class-info"><strong>${escapeHTML(item.subject)}${item.turma ? ` · ${escapeHTML(item.turma)}` : ""}</strong><span>${escapeHTML(item.teacher)} · ${escapeHTML(item.type)} · ${escapeHTML(dateLabel(item.date))}</span></div>
             <div class="class-side"><strong>${escapeHTML(item.time)}</strong><span class="${item.status === "scheduled" ? "scheduled-tag" : ""}">${item.status === "scheduled" ? "Agendada" : "Cadastrada"}</span></div>
           </label>`).join("")}</div>` : emptyState("Nenhuma aula para excluir", "Suas aulas agendadas e cadastradas aparecerão nesta lista.")}</section>
           ${classes.length ? `<div class="delete-toolbar" style="margin-top:14px"><span id="selectedCount">${selectedForDelete.size} selecionada(s)</span><button id="deleteSelected" class="button danger" type="button" ${selectedForDelete.size ? "" : "disabled"}>Excluir selecionadas</button></div>` : ""}`;
@@ -584,15 +589,15 @@
           <div class="notice">Estas listas ficam compartilhadas no Supabase. Outros usuários verão as alterações ao atualizar a página ou entrar novamente. A edição de uma opção não altera aulas já cadastradas.</div>
           <div class="admin-layout">
             <div class="admin-section">${renderAdminCategory("Professores", "teachers", "Nome da professora ou professor")}${renderAdminCategory("Disciplinas", "subjects", "Nome da disciplina")}</div>
-            <div class="admin-section">${renderAdminCategory("Tipos de aula", "types", "Ex.: Presencial, reforço...")}
-              <section class="panel"><div class="panel-heading"><h2>Histórico de exclusões</h2><span class="subtle">Registro local</span></div>${renderDeletionLog()}</section>
+            <div class="admin-section">${renderAdminCategory("Tipos de aula", "types", "Ex.: Presencial, reforço...")}${renderAdminCategory("Turmas", "turmas", "Ex.: 1º A, 2º B...")}
+              <section class="panel"><div class="panel-heading"><h2>Histórico de exclusões</h2><span class="subtle">Registro no Supabase</span></div>${renderDeletionLog()}</section>
             </div>
           </div>`;
       }
       function renderDeletionLog() {
         const log = getDatabase().deletionLog.slice().reverse().slice(0, 8);
         if (!log.length) return `<div class="small-empty">Nenhuma aula excluída até agora.</div>`;
-        return `<div class="class-list">${log.map(item => `<div class="class-row"><div class="class-info"><strong>${escapeHTML(item.subject)} · ${escapeHTML(dateLabel(item.date))}</strong><span>Motivo: ${escapeHTML(item.reason)}</span></div></div>`).join("")}</div>`;
+        return `<div class="class-list">${log.map(item => `<div class="class-row"><div class="class-info"><strong>${escapeHTML(item.subject)}${item.turma ? ` · ${escapeHTML(item.turma)}` : ""} · ${escapeHTML(dateLabel(item.date))}</strong><span>Motivo: ${escapeHTML(item.reason)}</span></div></div>`).join("")}</div>`;
       }
       function renderProfile() {
         return `${pageHeading("Meu perfil", "Confira seus dados e atualize o nome exibido no sistema.")}
@@ -632,11 +637,12 @@
         const item = {
           id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
           type: String(form.get("type")), subject: String(form.get("subject")),
-          teacher: String(form.get("teacher")), date: String(form.get("date")),
+          teacher: String(form.get("teacher")), turma: String(form.get("turma")), date: String(form.get("date")),
           time: String(form.get("time")), notes: String(form.get("notes") || "").trim(),
           status: event.target.dataset.status
         };
-        if (!data.types.includes(item.type) || !data.subjects.includes(item.subject) || !data.teachers.includes(item.teacher)) {
+        if (!data.types.includes(item.type) || !data.subjects.includes(item.subject) ||
+            !data.teachers.includes(item.teacher) || !data.turmas.includes(item.turma)) {
           return notify("Uma das opções selecionadas não está mais disponível. Atualize o formulário.", true);
         }
         const submitButton = event.target.querySelector('button[type="submit"]');
@@ -644,7 +650,7 @@
         try {
           const saved = requireSuccess(await client.from("monitoria_aulas").insert({
             user_id: currentUser.id, type: item.type, subject: item.subject,
-            teacher: item.teacher, date: item.date, time: item.time,
+            teacher: item.teacher, turma: item.turma, date: item.date, time: item.time,
             notes: item.notes, status: item.status
           }).select("id,type,subject,teacher,date,time,notes,status").single());
           databaseCache.classes.push({ ...saved, time: String(saved.time).slice(0, 5) });
@@ -708,7 +714,13 @@
           }
           return;
         }
-        const property = key === "teachers" ? "teacher" : key === "subjects" ? "subject" : "type";
+        const property = {
+          teachers: "teacher",
+          subjects: "subject",
+          types: "type",
+          turmas: "turma"
+        }[key];
+        if (!property) return notify("Categoria administrativa inválida.", true);
         if (data.classes.some(item => item[property] === oldName)) {
           return notify("Este item está associado a uma aula. Edite-o ou remova as aulas primeiro.", true);
         }
