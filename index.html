@@ -66,6 +66,36 @@
     .topbar { height: 72px; padding: 0 clamp(20px, 4vw, 52px); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: #fff; }
     .breadcrumb { color: var(--muted); font-size: 12px; }
     .topbar-date { color: #69768b; font-size: 12px; }
+    .topbar-actions { display: flex; align-items: center; gap: 17px; }
+    .account-menu { position: relative; }
+    .account-trigger { display: flex; align-items: center; gap: 9px; padding: 5px 8px 5px 5px; border: 0; border-radius: 9px; color: #526178; background: transparent; text-align: left; }
+    .account-trigger:hover, .account-trigger[aria-expanded="true"] { background: #f3f6fb; }
+    .account-trigger .avatar { width: 34px; height: 34px; }
+    .account-trigger-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 700; }
+    .account-caret { color: #8d99aa; font-size: 10px; }
+    .account-dropdown { position: absolute; z-index: 7; top: calc(100% + 9px); right: 0; width: 228px; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: #fff; box-shadow: var(--shadow); }
+    .account-dropdown:before { content: ""; display: block; position: absolute; top: -6px; right: 15px; width: 10px; height: 10px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); background: #fff; transform: rotate(45deg); }
+    .account-dropdown button { position: relative; display: flex; align-items: center; gap: 11px; width: 100%; padding: 10px; border: 0; border-radius: 7px; color: #59677c; background: transparent; text-align: left; font-size: 12px; }
+    .account-dropdown button:hover { color: var(--blue); background: var(--blue-soft); }
+    .account-dropdown .menu-icon { width: 16px; text-align: center; font-size: 15px; }
+    .account-dropdown .menu-divider { height: 1px; margin: 4px 6px; background: var(--line); }
+    .account-dropdown button.logout-menu-item:hover { color: var(--red); background: #fff5f5; }
+    body.dark-theme { --ink: #e7edf7; --muted: #9ba9bd; --line: #303b4e; --surface: #202a3a; --canvas: #151d2a; --blue-soft: #25375a; --yellow: #493c20; --yellow-ink: #f1d275; --shadow: 0 16px 45px rgba(0,0,0,.28); }
+    body.dark-theme .sidebar, body.dark-theme .topbar, body.dark-theme .panel, body.dark-theme .stat-card, body.dark-theme .form-card, body.dark-theme .delete-toolbar, body.dark-theme .account-dropdown { background: #202a3a; }
+    body.dark-theme .account-dropdown:before { background: #202a3a; }
+    body.dark-theme .account-trigger:hover, body.dark-theme .account-trigger[aria-expanded="true"], body.dark-theme .nav-item:hover { background: #2a3548; }
+    body.dark-theme .nav-item.active { background: #25375a; }
+    body.dark-theme .breadcrumb strong { color: var(--ink) !important; }
+    body.dark-theme .topbar-date { color: var(--muted); }
+    body.dark-theme .field label { color: #c3cede; }
+    body.dark-theme .field input, body.dark-theme .field select, body.dark-theme .field textarea, body.dark-theme .inline-form input, body.dark-theme .icon-button { color: var(--ink); border-color: var(--line); background: #182130; }
+    body.dark-theme .date-box { background: #2b3648; }
+    body.dark-theme .admin-table td { border-bottom-color: #303b4e; }
+    body.dark-theme .admin-table th { border-bottom-color: #303b4e; }
+    body.dark-theme .class-row { border-color: #303b4e; }
+    body.dark-theme .button.secondary { color: var(--ink); border-color: var(--line); background: #202a3a; }
+    body.dark-theme .notice { color: #c6d5f0; border-color: #344763; background: #202e43; }
+    body.dark-theme .notice.warning { color: #f0d891; border-color: #554a2e; background: #332d20; }
     .content { max-width: 1280px; padding: 35px clamp(20px, 4vw, 52px) 60px; margin: 0 auto; }
     .page-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 25px; }
     .page-heading h1 { margin: 0 0 8px; font-size: clamp(24px, 3vw, 30px); letter-spacing: -.045em; }
@@ -161,7 +191,10 @@
       .sidebar.open { transform: translateX(0); }
       .topbar { height: 60px; padding: 0 17px; gap: 12px; justify-content: flex-start; }
       .mobile-menu { display: inline-block; }
-      .topbar-date { margin-left: auto; font-size: 10px; }
+      .topbar-actions { margin-left: auto; gap: 8px; }
+      .topbar-date { font-size: 10px; }
+      .account-trigger { padding: 4px; }
+      .account-trigger-name, .account-caret { display: none; }
       .content { padding: 25px 16px 40px; }
       .page-heading { align-items: center; }
       .page-heading p { max-width: 300px; }
@@ -234,17 +267,27 @@
         <button id="adminNav" class="nav-item hidden" data-page="admin"><span class="nav-icon">⚙</span>Área administrativa</button>
       </nav>
       <div class="sidebar-spacer"></div>
-      <div class="user-card">
-        <div class="avatar" id="userAvatar">A</div>
-        <div class="user-meta"><strong id="userName">Aluno monitor</strong><span id="userEmail"></span></div>
-        <button class="logout-button" id="logoutButton" type="button" aria-label="Sair da conta" title="Sair">↪</button>
-      </div>
     </aside>
     <section class="main-area">
       <header class="topbar">
         <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Abrir menu">☰</button>
         <div class="breadcrumb">Painel <span style="color:#b6bfcc">/</span> <strong id="breadcrumbCurrent" style="color:#394961">Visão geral</strong></div>
-        <div class="topbar-date" id="todayLabel"></div>
+        <div class="topbar-actions">
+          <div class="topbar-date" id="todayLabel"></div>
+          <div class="account-menu">
+            <button class="account-trigger" id="accountTrigger" type="button" aria-label="Abrir menu da conta" aria-expanded="false" aria-controls="accountDropdown">
+              <span class="avatar" id="userAvatar">A</span>
+              <span class="account-trigger-name" id="userName">Aluno monitor</span>
+              <span class="account-caret" aria-hidden="true">▼</span>
+            </button>
+            <div id="accountDropdown" class="account-dropdown hidden" role="menu">
+              <button type="button" data-go="profile" role="menuitem"><span class="menu-icon">▣</span>Perfil</button>
+              <button type="button" id="themeToggle" role="menuitem"><span class="menu-icon" id="themeIcon">☾</span><span id="themeLabel">Tema escuro</span></button>
+              <div class="menu-divider"></div>
+              <button type="button" id="logoutButton" class="logout-menu-item" role="menuitem"><span class="menu-icon">⇥</span>Sair</button>
+            </div>
+          </div>
+        </div>
       </header>
       <div id="content" class="content"></div>
     </section>
@@ -263,7 +306,7 @@
       const PAGE_TITLES = {
         dashboard: "Visão geral", schedule: "Agendar aula", register: "Cadastrar aula",
         upcoming: "Aulas agendadas", mine: "Minhas aulas", delete: "Excluir aulas",
-        admin: "Área administrativa"
+        admin: "Área administrativa", profile: "Perfil"
       };
       const $ = (selector, root = document) => root.querySelector(selector);
       const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -287,6 +330,29 @@
         toast.classList.remove("hidden");
         clearTimeout(toastTimer);
         toastTimer = setTimeout(() => toast.classList.add("hidden"), 3400);
+      }
+      function applyTheme(isDark) {
+        document.body.classList.toggle("dark-theme", isDark);
+        $("#themeIcon").textContent = isDark ? "☀" : "☾";
+        $("#themeLabel").textContent = isDark ? "Tema claro" : "Tema escuro";
+        try {
+          localStorage.setItem("monitoria_theme", isDark ? "dark" : "light");
+        } catch (error) {
+          console.error("Não foi possível salvar a preferência de tema.", error);
+        }
+      }
+      function closeAccountMenu() {
+        $("#accountDropdown").classList.add("hidden");
+        $("#accountTrigger").setAttribute("aria-expanded", "false");
+      }
+      function toggleAccountMenu() {
+        const dropdown = $("#accountDropdown");
+        const isOpen = dropdown.classList.toggle("hidden") === false;
+        $("#accountTrigger").setAttribute("aria-expanded", String(isOpen));
+      }
+      function updateAccountIdentity() {
+        $("#userName").textContent = currentUser.name;
+        $("#userAvatar").textContent = currentUser.name.trim().slice(0, 1).toLocaleUpperCase("pt-BR") || "A";
       }
       function escapeHTML(value) {
         return String(value ?? "").replace(/[&<>"']/g, char => ({
@@ -369,9 +435,7 @@
         };
         $("#authScreen").classList.add("hidden");
         $("#app").classList.remove("hidden");
-        $("#userName").textContent = currentUser.name;
-        $("#userEmail").textContent = currentUser.email;
-        $("#userAvatar").textContent = currentUser.name.trim().slice(0, 1) || "A";
+        updateAccountIdentity();
         $("#todayLabel").textContent = new Intl.DateTimeFormat("pt-BR", {
           weekday: "short", day: "numeric", month: "long"
         }).format(new Date());
@@ -396,6 +460,27 @@
         $("#app").classList.add("hidden");
         $("#authScreen").classList.remove("hidden");
         $("#authForm").reset();
+        closeAccountMenu();
+      }
+      async function onProfileSubmit(event) {
+        if (event.target.id !== "profileForm") return;
+        event.preventDefault();
+        const name = String(new FormData(event.target).get("name") || "").trim();
+        if (!name) return notify("Informe seu nome para salvar o perfil.", true);
+        const submitButton = event.target.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        try {
+          const { data, error } = await client.auth.updateUser({ data: { full_name: name } });
+          if (error) throw error;
+          currentUser.name = data.user.user_metadata?.full_name || name;
+          updateAccountIdentity();
+          renderPage("profile");
+          notify("Perfil atualizado.");
+        } catch (error) {
+          console.error("Falha ao atualizar o perfil.", error);
+          notify(getErrorMessage(error), true);
+          submitButton.disabled = false;
+        }
       }
       function dateLabel(dateValue, compact = false) {
         if (!dateValue) return "";
@@ -509,6 +594,16 @@
         if (!log.length) return `<div class="small-empty">Nenhuma aula excluída até agora.</div>`;
         return `<div class="class-list">${log.map(item => `<div class="class-row"><div class="class-info"><strong>${escapeHTML(item.subject)} · ${escapeHTML(dateLabel(item.date))}</strong><span>Motivo: ${escapeHTML(item.reason)}</span></div></div>`).join("")}</div>`;
       }
+      function renderProfile() {
+        return `${pageHeading("Meu perfil", "Confira seus dados e atualize o nome exibido no sistema.")}
+        <form class="form-card" id="profileForm">
+          <div class="form-grid">
+            <div class="field full"><label for="profileName">Nome de exibição</label><input id="profileName" name="name" value="${escapeHTML(currentUser.name)}" maxlength="100" required autocomplete="name"></div>
+            <div class="field full"><label for="profileEmail">E-mail da conta</label><input id="profileEmail" value="${escapeHTML(currentUser.email)}" disabled><span class="subtle">Para alterar o e-mail, peça ao administrador para atualizar sua conta no Supabase.</span></div>
+          </div>
+          <div class="form-actions"><button class="button" type="submit">Salvar perfil</button></div>
+        </form>`;
+      }
       function renderPage(page) {
         if (page === "admin" && !currentUser?.isAdmin) {
           notify("A Área administrativa é restrita a administradores.", true);
@@ -524,7 +619,8 @@
           upcoming: () => renderClassList("scheduled"),
           mine: () => renderClassList("registered"),
           delete: renderDelete,
-          admin: renderAdmin
+          admin: renderAdmin,
+          profile: renderProfile
         })[currentPage]();
         $("#sidebar").classList.remove("open");
       }
@@ -690,22 +786,47 @@
       document.addEventListener("submit", event => {
         if (event.target.id === "authForm") onAuthSubmit(event);
         else if (event.target.id === "classForm") onClassSubmit(event);
+        else if (event.target.id === "profileForm") onProfileSubmit(event);
         else if (event.target.matches(".category-form")) onCategorySubmit(event);
         else if (event.target.id === "deleteForm") onDeleteSubmit(event);
       });
       document.addEventListener("click", event => {
+        if (event.target.closest("#accountTrigger")) {
+          toggleAccountMenu();
+          return;
+        }
+        if (event.target.closest("#themeToggle")) {
+          applyTheme(!document.body.classList.contains("dark-theme"));
+          return;
+        }
+        if (event.target.closest("#logoutButton")) {
+          logout();
+          return;
+        }
+        if (!event.target.closest(".account-menu")) closeAccountMenu();
         const nav = event.target.closest("[data-page]");
         const go = event.target.closest("[data-go]");
         const editOrDelete = event.target.closest(".edit-item, .delete-item");
         if (nav) renderPage(nav.dataset.page);
-        else if (go) renderPage(go.dataset.go);
+        else if (go) {
+          closeAccountMenu();
+          renderPage(go.dataset.go);
+        }
         else if (editOrDelete) onAdminAction({ target: editOrDelete });
         else if (event.target.id === "deleteSelected") openDeleteDialog();
         else if (event.target.id === "cancelDelete" || event.target.id === "deleteModal") $("#modalRoot").innerHTML = "";
       });
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape") closeAccountMenu();
+      });
       document.addEventListener("change", onDeleteSelection);
-      $("#logoutButton").addEventListener("click", logout);
       $("#mobileMenu").addEventListener("click", () => $("#sidebar").classList.toggle("open"));
+      try {
+        applyTheme(localStorage.getItem("monitoria_theme") === "dark");
+      } catch (error) {
+        console.error("Não foi possível carregar a preferência de tema.", error);
+        applyTheme(false);
+      }
       if (!client) {
         const configWarning = $("#configWarning");
         if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
