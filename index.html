@@ -345,7 +345,7 @@
       }
       async function onAuthSubmit(event) {
         event.preventDefault();
-        const form = new FormData(event.currentTarget);
+        const form = new FormData(event.target);
         const email = String(form.get("email") || "").trim().toLowerCase();
         const password = String(form.get("password") || "");
         try {
